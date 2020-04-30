@@ -1,0 +1,9 @@
+graphviz==0.8.4
+networkx==2.4
+numpy==1.18.1
+pandas==1.0.1
+scipy==1.4.1
+toolz==0.9.0
+torch
+torchvision
+matplotlib
