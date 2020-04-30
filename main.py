@@ -1,5 +1,5 @@
-import argparse
 import torch
+import argparse
 import torch.nn.functional as F
 import sys
 import os
@@ -262,9 +262,9 @@ def main(params):
         g.readonly()
         # initialize the history for control variate
         # see control variate in https://arxiv.org/abs/1710.10568
-        for i in range(params.num_layers):
-            #g.ndata['history_{}'.format(i)] = torch.zeros((features.shape[0], params.node_hidden_dim))
-            g.ndata['history_{}'.format(i)] = torch.zeros((features.shape[0], params.num_hidden))
+        # for i in range(params.num_layers):
+        #     #g.ndata['history_{}'.format(i)] = torch.zeros((features.shape[0], params.node_hidden_dim))
+        #     g.ndata['history_{}'.format(i)] = torch.zeros((features.shape[0], params.num_hidden))
         #g.edata['edge_features'] = data.graph.edata['edge_features']
         norm = 1./g.in_degrees().unsqueeze(1).float()
         g.ndata['norm'] = norm
@@ -382,7 +382,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Examples')
     # register_data_args(parser)
     parser.add_argument("--data-dir", type=str, required=True, 
-                        help="Directory containing adj.txt, features.txt, label.txt")
+                        help="Directory containing network.csv, features.csv, labels.csv")
     parser.add_argument("--model-dir", type=str, required=True, 
                         help="Directory containing params.json")
     parser.add_argument('--restore_file', default=None,
@@ -404,6 +404,7 @@ if __name__ == '__main__':
 
     params.data_dir = args.data_dir
     params.model_dir = args.model_dir
+    params.gpu = args.gpu
 
     # params.cuda = torch.cuda.is_available()
 

@@ -65,7 +65,7 @@ class Dataset(object):
         train_id, test_id, y_train, y_test = train_test_split(self.labels.index, self.labels['label'], 
                                             test_size=0.2, random_state=6, stratify=self.labels['label'])
         train_id, val_id, y_train, y_val = train_test_split(train_id, y_train, 
-                                            test_size=0.2, random_state=6, stratify=y_train)
+                                            test_size=0.25, random_state=6, stratify=y_train)
         self.train_id = train_id
         self.val_id = val_id
         self.test_id = test_id

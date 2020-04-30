@@ -1,4 +1,5 @@
 from .utils.metrics import torch_accuracy, accuracy, micro_f1, macro_f1, hamming_loss, micro_precision, micro_recall, macro_precision, macro_recall
+from sklearn.metrics import classification_report, confusion_matrix
 from .utils.torch_utils import EarlyStopping
 import torch
 # try:
@@ -91,17 +92,17 @@ class MiniBatchTrainer(object):
                                         seed_nodes=self.train_id, 
                                         num_workers=self.num_cpu):
                 # update the aggregate history of all nodes in each layer
-                for i in range(self.n_layers):
-                    agg_history_str = 'agg_history_{}'.format(i)
-                    self.g.pull(nf.layer_parent_nid(i+1), 
-                                fn.copy_src(src='history_{}'.format(i), out='m'),
-                                fn.sum(msg='m', out=agg_history_str))
+                # for i in range(self.n_layers):
+                #     agg_history_str = 'agg_history_{}'.format(i)
+                #     self.g.pull(nf.layer_parent_nid(i+1), 
+                #                 fn.copy_src(src='history_{}'.format(i), out='m'),
+                #                 fn.sum(msg='m', out=agg_history_str))
 
                 # Copy the features from the original graph to the nodeflow graph
-                node_embed_names = [['node_features', 'history_0', 'subg_norm', 'norm']]
+                node_embed_names = [['node_features', 'subg_norm', 'norm']]
                 for i in range(1, self.n_layers):
-                    node_embed_names.append(['history_{}'.format(i), 'agg_history_{}'.format(i-1), 'subg_norm', 'norm'])
-                node_embed_names.append(['agg_history_{}'.format(self.n_layers-1), 'subg_norm', 'norm'])
+                    node_embed_names.append(['subg_norm', 'norm'])
+                node_embed_names.append(['subg_norm', 'norm'])
                 edge_embed_names = [['edge_features']]
                 for i in range(1, self.n_layers):
                     edge_embed_names.append(['edge_features'])
@@ -132,14 +133,6 @@ class MiniBatchTrainer(object):
                 train_loss.backward()
                 self.optimizer.step()
 
-                node_embed_names = [['history_{}'.format(i)] for i in range(self.n_layers)]
-                node_embed_names.append([])
-
-                for i, names in enumerate(node_embed_names):
-                    for name in names:
-                        nf.layers[i].data[name] = nf.layers[i].data[name].cpu()
-                # Copy the udpated features from the nodeflow graph to the original graph
-                nf.copy_to_parent(node_embed_names=node_embed_names, edge_embed_names=None)
                 torch.cuda.empty_cache() 
 
             # loss and accuracy of this epoch
@@ -151,6 +144,13 @@ class MiniBatchTrainer(object):
             train_macro_recall = macro_recall(pred_temp, label_temp)
             train_micro_f1 = micro_f1(pred_temp, label_temp)
             train_macro_f1 = macro_f1(pred_temp, label_temp)
+            logging.info('TRAIN CLASSIFICATION REPORT')
+            logging.info(classification_report(y_true=label_temp, 
+                                               y_pred=pred_temp))
+
+            logging.info('TRAIN CONFUSION MATRIX')
+            logging.info(confusion_matrix(y_true=label_temp, 
+                                          y_pred=pred_temp))
 
             # copy parameter to the inference model
             if epoch >= 2:
@@ -166,7 +166,7 @@ class MiniBatchTrainer(object):
                                         expand_factor=self.g.number_of_nodes(),
                                         neighbor_type='in',
                                         num_hops=self.n_layers,
-                                        seed_nodes=self.test_id,
+                                        seed_nodes=self.val_id,
                                         add_self_loop=True, 
                                         num_workers=self.num_cpu):
                 # in testing/validation, no need to update the history
@@ -206,6 +206,13 @@ class MiniBatchTrainer(object):
             val_macro_recall = macro_recall(pred_temp, label_temp)
             val_micro_f1 = micro_f1(pred_temp, label_temp)
             val_macro_f1 = macro_f1(pred_temp, label_temp)
+            logging.info('VAL CLASSIFICATION REPORT')
+            logging.info(classification_report(y_true=label_temp, 
+                                               y_pred=pred_temp))
+
+            logging.info('VAL CONFUSION MATRIX')
+            logging.info(confusion_matrix(y_true=label_temp, 
+                                          y_pred=pred_temp))
 
             # early stopping
             self.early_stopping(val_average_loss, self.model_infer)
@@ -213,13 +220,6 @@ class MiniBatchTrainer(object):
                 logging.info("Early stopping")
                 break
 
-            # if epoch == 25:
-            #     # switch to sgd with large learning rate
-            #     # https://arxiv.org/abs/1706.02677
-            #     self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.001)
-            #     self.sched = torch.optim.lr_scheduler.LambdaLR(self.optimizer, self.sched_lambda['decay'])
-            # elif epoch < 25:
-            #     self.sched.step()
             logging.info("Epoch {:05d} | Time(s) {:.4f} | \n"
                 "TrainLoss {:.4f} | TrainAcc {:.4f} | TrainPrecision {:.4f} | TrainRecall {:.4f} | TrainMacroF1 {:.4f} | TrainMicroF1 {:.4f}\n"
                 "ValLoss {:.4f}   | ValAcc {:.4f}   | ValPrecision{:.4f}    | ValRecall {:.4f}   | ValMacroF1 {:.4f}   | ValMicroF1 {:.4f}\n"
@@ -234,7 +234,77 @@ class MiniBatchTrainer(object):
             # self.writer.add_embedding(embeddings, global_step=epoch, metadata=batch_labels)
 
         # load the last checkpoint with the best model
-        self.model.load_state_dict(torch.load(os.path.join(self.model_dir, 'checkpoint.pt')))
+        self.model_infer.load_state_dict(torch.load(os.path.join(self.model_dir, 'checkpoint.pt')))
+    ##########################################################################
+    ##########################################################################
+    #########################################################################
+        test_losses = []
+        test_accuracies = []
+        pred_temp = np.array([])
+        label_temp = np.array([])
+        # Validation
+        test_num_correct = 0  # number of correct prediction in validation set
+        test_total_losses = 0  # total cross entropy loss
+        for nf in NeighborSampler(self.g, 
+                                    batch_size=self.batch_size,
+                                    expand_factor=self.g.number_of_nodes(),
+                                    neighbor_type='in',
+                                    num_hops=self.n_layers,
+                                    seed_nodes=self.test_id,
+                                    add_self_loop=True, 
+                                    num_workers=self.num_cpu):
+            # in testing/validation, no need to update the history
+            node_embed_names = [['node_features']]
+            edge_embed_names = [['edge_features']]
+            for i in range(self.n_layers):
+                node_embed_names.append(['norm', 'subg_norm'])
+            for i in range(1, self.n_layers):
+                edge_embed_names.append(['edge_features'])
+            nf.copy_from_parent(node_embed_names=node_embed_names, 
+                                edge_embed_names=edge_embed_names,
+                                ctx=self.cuda_context)
+            self.model_infer.load_state_dict(self.model.state_dict())
+            logits, embeddings = self.model_infer(nf)
+            batch_node_ids = nf.layer_parent_nid(-1)
+            batch_size = len(batch_node_ids)
+            batch_labels = torch.LongTensor(self.labels.loc[batch_node_ids]['label'].values)
+            if self.cuda_context:
+                batch_labels = batch_labels.cuda()
+            mini_batch_accuracy = torch_accuracy(logits, batch_labels)
+            test_num_correct += mini_batch_accuracy * batch_size
+            mini_batch_test_loss = self.loss_fn(logits, batch_labels)
+            test_total_losses += (mini_batch_test_loss.item() * batch_size)
+
+            _, indicies = torch.max(logits, dim=1)
+            pred = indicies.cpu().detach().numpy()
+            pred_temp = np.append(pred_temp, pred)
+            label_temp = np.append(label_temp, batch_labels.cpu())
+
+
+        # loss and accuracy of this epoch
+        test_average_loss = test_total_losses / len(self.test_id)
+        test_losses.append(test_average_loss)
+        test_accuracy = test_num_correct / len(self.test_id)
+        test_accuracies.append(test_accuracy)
+        test_macro_precision = macro_precision(pred_temp, label_temp)
+        test_macro_recall = macro_recall(pred_temp, label_temp)
+        test_micro_f1 = micro_f1(pred_temp, label_temp)
+        test_macro_f1 = macro_f1(pred_temp, label_temp)
+        logging.info('TEST CLASSIFICATION REPORT')
+        logging.info(classification_report(y_true=label_temp, 
+                                            y_pred=pred_temp))
+
+        logging.info('TEST CONFUSION MATRIX')
+        logging.info(confusion_matrix(y_true=label_temp, 
+                                        y_pred=pred_temp))
+
+
+        logging.info("Epoch {:05d} | Time(s) {:.4f} | \n"
+            "TestLoss {:.4f}   | TestAcc {:.4f}   | TestPrecision{:.4f}    | TestRecall {:.4f}   | TestMacroF1 {:.4f}   | TestMicroF1 {:.4f}\n"
+            "ETputs(KTEPS) {:.2f}\n".
+            format(epoch, np.mean(dur), 
+                    test_average_loss, test_accuracy, test_macro_precision, test_macro_recall, test_macro_f1, test_micro_f1, 
+                    self.n_edges / np.mean(dur) / 1000))
 
 
         self.plot(train_losses, val_losses, train_accuracies, val_accuracies)

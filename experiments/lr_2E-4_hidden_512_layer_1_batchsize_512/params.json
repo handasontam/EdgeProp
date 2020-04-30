@@ -1,0 +1,15 @@
+{
+    "model": "MiniBatchEdgeProp", 
+    "epochs": 500, 
+    "num_layers": 1, 
+    "num_hidden": 512, 
+    "in_drop": 0.0, 
+    "lr": 0.0002, 
+    "batch_size": 512, 
+    "test_batch_size": 512, 
+    "num_neighbors": 250, 
+    "weight_decay": 0.001,
+    "fastmode": false,
+    "patience": 30,
+    "num_cpu": 5
+}

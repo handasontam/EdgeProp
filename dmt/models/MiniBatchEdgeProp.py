@@ -66,18 +66,19 @@ class NodeUpdate(nn.Module):
         else:
             # normalization constant
             subg_norm = node.data['subg_norm']
-            if self.layer_id == 0:
-                h = (h - self_h) * subg_norm
-            else:
-                agg_history_str = 'agg_history_{}'.format(self.layer_id)
-                agg_history = node.data[agg_history_str]
-                # delta_h (h - history) from previous layer of myself
-                self_delta_h = node.data['self_delta_h']
-                # control variate for variance reduction
-                # h-self_delta_h because:
-                # {1234} -> {34}
-                # we only want sum of delta_h for {1,2}
-                h = (h - self_delta_h) * subg_norm + agg_history * norm
+            h = (h - self_h) * subg_norm
+            # if self.layer_id == 0:
+            #     h = (h - self_h) * subg_norm
+            # else:
+            #     agg_history_str = 'agg_history_{}'.format(self.layer_id)
+            #     agg_history = node.data[agg_history_str]
+            #     # delta_h (h - history) from previous layer of myself
+            #     self_delta_h = node.data['self_delta_h']
+            #     # control variate for variance reduction
+            #     # h-self_delta_h because:
+            #     # {1234} -> {34}
+            #     # we only want sum of delta_h for {1,2}
+            #     h = (h - self_delta_h) * subg_norm + agg_history * norm
         # graphsage
         h = torch.cat((h, self_h), 1)
         h = self.feat_drop(h)
@@ -173,30 +174,31 @@ class MiniBatchEdgeProp(nn.Module):
                 self_h = torch.cat((torch.zeros(len(layer_nid), self.num_hidden), h[layer_nid]), 1)
             self_h = phi_layer(self_h)
             nf.layers[i+1].data['self_h'] = self_h # ((#nodes in layer_i+1) X D)
-            if i == 0:
-                nf.layers[i].data['h'] = h
-            else:
-                new_history = h.detach()
-                history_str = 'history_{}'.format(i)
-                history = nf.layers[i].data[history_str]  # ((#nodes in layer_i) X D)
+            # if i == 0:
+            nf.layers[i].data['h'] = h
+            # else:
+                # new_history = h.detach()
+                # history_str = 'history_{}'.format(i)
+                # history = nf.layers[i].data[history_str]  # ((#nodes in layer_i) X D)
 
                 # delta_h used in control variate
                 #delta_h = h - history  # ((#nodes in layer_i) X D)
                 # delta_h from previous layer of the nodes in (i+1)-th layer, used in control variate
                 #nf.layers[i+1].data['self_delta_h'] = delta_h[layer_nid]
-                nf.layers[i+1].data['self_delta_h'] = self_h - history[layer_nid]
+                # nf.layers[i+1].data['self_delta_h'] = self_h - history[layer_nid]
 
                 #nf.layers[i].data['h'] = delta_h
 
 
             def message_func(edges):
-                temp = torch.cat((edges.data['e'],edges.src['h']), 1)
-                temp = phi_layer(temp)
+                m = torch.cat((edges.data['e'],edges.src['h']), 1)
+                m = phi_layer(m)
                 #temp = self.activation(temp)
-                history = edges.src['history_{}'.format(i)]
-                delta_nb = temp - history
+                # history = edges.src['history_{}'.format(i)]
+                # delta_nb = temp - history
                 # delta_nb = self.activation(delta_nb)
-                return {'m': delta_nb}
+                # return {'m': delta_nb}
+                return {'m': m}
     
             nf.block_compute(i,
                             message_func,
@@ -205,8 +207,8 @@ class MiniBatchEdgeProp(nn.Module):
             h = nf.layers[i+1].data.pop('activation')
 
             # update history
-            if (i < nf.num_layers-1) and (i!=0):
-                nf.layers[i].data[history_str] = new_history
+            # if (i < nf.num_layers-1) and (i!=0):
+                # nf.layers[i].data[history_str] = new_history
         h = self.fc(h)
         return h
 

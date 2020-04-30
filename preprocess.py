@@ -1,5 +1,6 @@
 import logging
 import dgl
+import argparse
 import numpy as np
 import pandas as pd
 import pickle
@@ -12,10 +13,13 @@ from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from dmt.utils import Params, set_logger, style
 
+parser = argparse.ArgumentParser(description='Examples')
+# register_data_args(parser)
+parser.add_argument("--data-dir", type=str, required=True, 
+                    help="Directory containing network.csv, features.csv, labels.csv")
+args = parser.parse_args()
 
-
-
-data_path = './data'
+data_path = args.data_dir
 set_logger(os.path.join(data_path, 'preprocess.log'))
 node_features_path = os.path.join(data_path, 'features.csv')
 processed_node_features_path = os.path.join(data_path, 'processed_node_features.csv')
@@ -139,7 +143,7 @@ def preprocess_labels(labels, feat_graph_intersec_set, v_mapping):
         train_id, test_id, y_train, y_test = train_test_split(labels.index, labels['label'], 
                                             test_size=0.2, random_state=6, stratify=labels['label'])
         train_id, val_id, y_train, y_val = train_test_split(train_id, y_train, 
-                                            test_size=0.2, random_state=6, stratify=y_train)
+                                            test_size=0.25, random_state=6, stratify=y_train)
     train_mask = np.zeros((number_of_nodes,)).astype(int)
     val_mask = np.zeros((number_of_nodes,)).astype(int)
     test_mask = np.zeros((number_of_nodes,)).astype(int)
