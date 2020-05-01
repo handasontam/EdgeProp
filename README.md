@@ -15,6 +15,7 @@ pip install dgl-cu101
 # Copy features.csv, labels.csv and network.csv to the data directory
 # Start the experiment (36 experiments in total)
 sh run_experiments.sh
+sh run_experiments2.sh
 ```
 ## network.csv:
 ```
