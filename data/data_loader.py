@@ -57,6 +57,9 @@ class Dataset(object):
         logging.info('filtering unused nodes in the label')
         # convert label to one-hot format
         logging.info('convert label to one-hot format')
+        self.labels = self.labels.set_index('nodeId')
+        self.labels.index = self.labels.index.astype(int)
+        self.labels = self.labels.loc[~self.labels.index.duplicated(keep='last')]
         one_hot_labels = pd.get_dummies(data=self.labels, dummy_na=True, columns=['label']) # N X (#edge attr)  # one hot 
         one_hot_labels = one_hot_labels.drop(['label_nan'], axis=1)
         logging.info('Train, validation, test split')
