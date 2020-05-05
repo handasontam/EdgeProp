@@ -31,6 +31,7 @@ if directed:
     num_edge_feats = num_edge_feats * 2
 label_path = os.path.join(data_path, 'labels.csv')
 processed_label_path = os.path.join(data_path, 'processed_labels.csv')
+processed_static_edge_features = os.path.join(data_path, 'static_network.csv')
 vertex_map_path = os.path.join(data_path, 'node_id_map.csv' )
 train_val_test_mask = os.path.join(data_path, 'mask.txt')
 dgl_pickle_path = os.path.join(data_path, 'dgl_graph.pkl')
@@ -51,7 +52,7 @@ def hand_craft_edge_features():
                                delimiter=',')
     transactions = transactions.groupby(['srcId', 'dstId'])[['money', 'type']].agg(['mean', 'median', 'sum', 'count', 'std', 'max', 'min', 'last']).fillna(0)
     transactions.columns = transactions.columns.to_flat_index()
-    transactions.to_csv('./data/static_network.csv')
+    transactions.to_csv(processed_static_edge_features)
     transactions = transactions.reset_index()
     return transactions
 
