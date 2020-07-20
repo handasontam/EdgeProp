@@ -4,3 +4,4 @@ processed_labels.csv
 static_network.csv
 *.log
 __pycache__
+.vscode

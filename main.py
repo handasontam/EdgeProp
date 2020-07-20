@@ -12,6 +12,7 @@ from dmt.trainer import Trainer
 from dmt.mini_batch_trainer import MiniBatchTrainer
 from dmt.unsupervised_trainer import UnsupervisedTrainer
 from dmt.unsupervised_mini_batch_trainer import UnsupervisedMiniBatchTrainer
+from dmt.classical_baseline_trainer import ClassicalBaseline
 # from dmt.data import register_data_args, load_data
 from data.data_loader import Dataset
 from dmt.utils import Params, set_logger, style
@@ -232,6 +233,8 @@ def main(params):
         # decoder = DGI.Classifier(
         #             params.node_hidden_dim, 
         #             n_classes)
+    elif params.model.lower() == 'classical_baselines':
+        pass
     else:
         logging.info('The model \"{}\" is not implemented'.format(params.model))
         sys.exit(0)
@@ -239,24 +242,25 @@ def main(params):
     # weights = len(train_id) / (n_classes * np.bincount(labels.loc[train_id]['label'].values))
     # class_weights = torch.FloatTensor(weights).cuda()
     # loss_fcn = torch.nn.CrossEntropyLoss(weight=class_weights)
-    loss_fcn = torch.nn.CrossEntropyLoss()
-    if params.model.lower() in ['dgi', 'minibatchdgi']:
-        if cuda:
-            unsupervised_model.cuda()   
-            if 'model_infer' in locals():
-                model_infer.cuda()
-            elif 'unsupervised_model_infer' in locals():
-                unsupervised_model_infer.cuda()
-        logging.info(unsupervised_model)
-        unsupervised_optimizer = torch.optim.Adam(unsupervised_model.parameters(), lr=params.lr, weight_decay=params.weight_decay)
-        # logging.info(decoder)
-    else:
-        if cuda:
-            model.cuda()   
-            if 'model_infer' in locals():
-                model_infer.cuda()
-        logging.info(model)
-        optimizer = torch.optim.Adam(model.parameters(), lr=params.lr, weight_decay=params.weight_decay)
+    if not params.model.lower() == 'classical_baselines':
+        loss_fcn = torch.nn.CrossEntropyLoss()
+        if params.model.lower() in ['dgi', 'minibatchdgi']:
+            if cuda:
+                unsupervised_model.cuda()   
+                if 'model_infer' in locals():
+                    model_infer.cuda()
+                elif 'unsupervised_model_infer' in locals():
+                    unsupervised_model_infer.cuda()
+            logging.info(unsupervised_model)
+            unsupervised_optimizer = torch.optim.Adam(unsupervised_model.parameters(), lr=params.lr, weight_decay=params.weight_decay)
+            # logging.info(decoder)
+        else:
+            if cuda:
+                model.cuda()   
+                if 'model_infer' in locals():
+                    model_infer.cuda()
+            logging.info(model)
+            optimizer = torch.optim.Adam(model.parameters(), lr=params.lr, weight_decay=params.weight_decay)
 
     if params.model.lower() in ['minibatchedgeprop', 'minibatchgcn', 'minibatchgraphsage', 'minibatchedgepropplus']:
         g.readonly()
@@ -356,6 +360,14 @@ def main(params):
                         model_dir=params.model_dir, 
                         num_cpu=params.num_cpu, 
                         cuda_context=cuda_context)
+    elif params.model.lower() in ['classical_baselines']:
+        trainer = ClassicalBaseline(
+                        features=features,
+                        labels=labels,
+                        train_id=train_id,
+                        val_id=val_id,
+                        test_id=test_id
+            )
     else:
         logging.info(style.RED('The model: {} is not supported yet.'.format(params.model)))
         sys.exit(0)
