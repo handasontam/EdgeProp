@@ -15,9 +15,8 @@ $ pip install dgl-cu101
 # Copy features.csv, labels.csv and network.csv to the data directory
 # preprocess the dataa
 $ python preprocess.py --data-dir ./data
-# Start the experiment (36 experiments in total)
-$ sh run_experiments.sh
-$ sh run_experiments2.sh
+# Start the experiment (120 experiments in total)
+$ python run.py
 ```
 
 # Run experiment (Classical Baselines)
