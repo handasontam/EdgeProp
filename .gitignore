@@ -5,3 +5,6 @@ static_network.csv
 *.log
 __pycache__
 .vscode
+accuracies_plot.png
+loss_plot.png
+checkpoint.pt

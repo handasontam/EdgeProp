@@ -24,8 +24,10 @@ import numpy as np
 def main(params):
     # load and preprocess dataset
     data = Dataset(data_path=params.data_dir, 
-                   directed=False)
+                   directed=False, 
+                   k=params.k)
     features = data.g.ndata['node_features']
+    logging.info('features shape: {}'.format(features.shape))
     labels = data.labels
     train_id = data.train_id
     val_id = data.val_id
@@ -402,6 +404,7 @@ if __name__ == '__main__':
                         training")  # 'best' or 'train'
     parser.add_argument('--gpu', type=int, default=None, required=True, 
                         help="gpu id, -1 if cpu")
+    parser.add_argument('--k', type=int, default=None, required=True, help="k")
     args = parser.parse_args()
 
 
@@ -417,6 +420,7 @@ if __name__ == '__main__':
     params.data_dir = args.data_dir
     params.model_dir = args.model_dir
     params.gpu = args.gpu
+    params.k=args.k
 
     # params.cuda = torch.cuda.is_available()
 

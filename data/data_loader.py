@@ -13,9 +13,10 @@ from utils import graph_utils, style
 # from .nx_utils import get_graph_from_data
 import pickle
 import logging
+from sklearn.model_selection import KFold
 
 class Dataset(object):
-    def __init__(self, data_path, directed):
+    def __init__(self, data_path, directed, k):
         self.data_path = data_path
         self.node_features_path = os.path.join(data_path, 'features.csv')
         # self.node_features_dir = os.path.join(data_path, 'features.txt')
@@ -26,6 +27,7 @@ class Dataset(object):
         self.vertex_map_path = os.path.join(data_path, 'node_id_map.csv' )
         self.train_val_test_mask = os.path.join(data_path, 'mask.csv')
         self.dgl_pickle_path = os.path.join(data_path, 'dgl_graph.pkl')
+        self.k = k
         self.load()
     
     def load_graph(self):
@@ -43,15 +45,6 @@ class Dataset(object):
         self.labels = pd.read_csv(self.label_path, 
                             delimiter=',', 
                             )
-
-    def load_vertex_id_map(self):
-        # Vertex id map
-        logging.info('Mapping vertex id to consecutive integers')
-        logging.info('Loading vertex id mapping from {}'.format(self.vertex_map_path))
-        v_map = pd.read_csv(self.vertex_map_path, delimiter=',', header=None)
-        self.v_mapping = pd.Series(v_map[1].values,index=v_map[0]).to_dict()
-        logging.info(style.GREEN('Load vertex id mapping success'))
-
     
     def preprocess_labels(self):
         logging.info('filtering unused nodes in the label')
@@ -65,13 +58,14 @@ class Dataset(object):
         logging.info('Train, validation, test split')
         # train, val, test split
         logging.info('The mask file: {} doest not exist. Performing train, val, test split'.format(self.train_val_test_mask))
-        train_id, test_id, y_train, y_test = train_test_split(self.labels.index, self.labels['label'], 
-                                            test_size=0.2, random_state=6, stratify=self.labels['label'])
-        train_id, val_id, y_train, y_val = train_test_split(train_id, y_train, 
-                                            test_size=0.25, random_state=6, stratify=y_train)
+        kf = KFold(n_splits=5, shuffle=True, random_state=0)
+        train_index, val_index = list(kf.split(self.labels.index))[self.k]
+        train_id = self.labels.iloc[train_index].index
+        val_id = self.labels.iloc[val_index].index
+
         self.train_id = train_id
         self.val_id = val_id
-        self.test_id = test_id
+        self.test_id = val_id
             
         self.train_mask = np.zeros((self.number_of_nodes,)).astype(int)
         self.val_mask = np.zeros((self.number_of_nodes,)).astype(int)
@@ -81,7 +75,8 @@ class Dataset(object):
         np.random.seed(1)
         self.train_mask[list(train_id)] = 1
         self.val_mask[list(val_id)] = 1
-        self.test_mask[list(test_id)] = 1
+        # self.test_mask[list(test_id)] = 1
+        self.test_mask[list(val_id)] = 1
 
         y = np.zeros(self.number_of_nodes)
         y[one_hot_labels.index] = np.argmax(one_hot_labels.values, 1)
@@ -98,8 +93,9 @@ class Dataset(object):
         # Load Graph
         self.load_graph()
         # Map vertex id to consecutive integers
-        self.load_vertex_id_map()
+        # self.load_vertex_id_map()
         # Preprocess ground truth label
         self.preprocess_labels()
 
-        self.num_classes = len(np.unique(self.labels))
+        # self.num_classes = len(np.unique(self.labels))
+        self.num_classes = len(np.unique(self.labels['label'].values))

@@ -73,9 +73,9 @@ def set_logger(log_path):
         logger.addHandler(file_handler)
 
         # Logging to console
-        stream_handler = logging.StreamHandler()
-        stream_handler.setFormatter(logging.Formatter('%(message)s'))
-        logger.addHandler(stream_handler)
+        # stream_handler = logging.StreamHandler()
+        # stream_handler.setFormatter(logging.Formatter('%(message)s'))
+        # logger.addHandler(stream_handler)
 
 if sys.platform.lower() == "win32":
     os.system('color')

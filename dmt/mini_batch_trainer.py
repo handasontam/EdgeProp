@@ -146,7 +146,8 @@ class MiniBatchTrainer(object):
             train_macro_f1 = macro_f1(pred_temp, label_temp)
             logging.info('TRAIN CLASSIFICATION REPORT')
             logging.info(classification_report(y_true=label_temp, 
-                                               y_pred=pred_temp))
+                                               y_pred=pred_temp, 
+                                               digits=4))
 
             logging.info('TRAIN CONFUSION MATRIX')
             logging.info(confusion_matrix(y_true=label_temp, 
@@ -208,7 +209,8 @@ class MiniBatchTrainer(object):
             val_macro_f1 = macro_f1(pred_temp, label_temp)
             logging.info('VAL CLASSIFICATION REPORT')
             logging.info(classification_report(y_true=label_temp, 
-                                               y_pred=pred_temp))
+                                               y_pred=pred_temp, 
+                                               digits=4))
 
             logging.info('VAL CONFUSION MATRIX')
             logging.info(confusion_matrix(y_true=label_temp, 
@@ -292,7 +294,8 @@ class MiniBatchTrainer(object):
         test_macro_f1 = macro_f1(pred_temp, label_temp)
         logging.info('TEST CLASSIFICATION REPORT')
         logging.info(classification_report(y_true=label_temp, 
-                                            y_pred=pred_temp))
+                                            y_pred=pred_temp,
+                                            digits=4))
 
         logging.info('TEST CONFUSION MATRIX')
         logging.info(confusion_matrix(y_true=label_temp, 

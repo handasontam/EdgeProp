@@ -50,6 +50,7 @@ def hand_craft_edge_features():
     logging.info('mannually extract edge features...')
     transactions = pd.read_csv(dynamic_edges_features_path, 
                                delimiter=',')
+    transactions['money'] = pd.to_numeric(transactions['money'], errors='coerce')
     transactions = transactions.groupby(['srcId', 'dstId'])[['money', 'type']].agg(['mean', 'median', 'sum', 'count', 'std', 'max', 'min', 'last']).fillna(0)
     transactions.columns = transactions.columns.to_flat_index()
     transactions.to_csv(processed_static_edge_features)
@@ -104,7 +105,7 @@ def preprocess_node_features(features, feat_graph_intersec_set, v_mapping):
     scaler = preprocessing.StandardScaler().fit(features)
     large_variance_column_index = np.where(scaler.var_ > 100)
     features[:, large_variance_column_index] = np.cbrt(features[:, large_variance_column_index])
-    scaler = preprocessing.StandardScaler().fit(features)
+    # scaler = preprocessing.StandardScaler().fit(features)
     features = scaler.transform(features)
     logging.info('features shape: {}'.format(features.shape))
     # np.savetxt(processed_node_features_path, features, delimiter=",")
@@ -171,6 +172,8 @@ def load_graph(node_features, edge_features, feat_graph_intersec_set, number_of_
     logging.info('*** Number of edges after filtering : {}'.format(edge_features.shape[0]))
     edge_from_id = edge_features['srcId'].values.astype(int)
     edge_to_id = edge_features['dstId'].values.astype(int)
+    print(v_mapping)
+    print(edge_from_id)
     # Map vertex id to consecutive integers
     edge_from_id = np.vectorize(v_mapping.get)(edge_from_id)
     edge_to_id = np.vectorize(v_mapping.get)(edge_to_id)
@@ -178,6 +181,7 @@ def load_graph(node_features, edge_features, feat_graph_intersec_set, number_of_
     # Create DGL Graph
     g = dgl.DGLGraph()
     g.add_nodes(number_of_nodes)
+    # self loop
     g.add_edges(u=edge_from_id, 
                 v=edge_to_id, 
                 data={'edge_features': torch.from_numpy(edge_features)})
