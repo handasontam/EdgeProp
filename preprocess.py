@@ -103,10 +103,9 @@ def preprocess_node_features(features, feat_graph_intersec_set, v_mapping):
     features = features.values
 
     # standardize node features and convert it to sparse matrix
-    scaler = preprocessing.StandardScaler().fit(features)
     large_variance_column_index = np.where(scaler.var_ > 100)
     features[:, large_variance_column_index] = np.cbrt(features[:, large_variance_column_index])
-    # scaler = preprocessing.StandardScaler().fit(features)
+    scaler = preprocessing.StandardScaler().fit(features)
     features = scaler.transform(features)
     logging.info('features shape: {}'.format(features.shape))
     # np.savetxt(processed_node_features_path, features, delimiter=",")
