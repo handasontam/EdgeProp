@@ -72,7 +72,8 @@ def vertex_id_map(node_features, static_edge_features):
     nodes_set = set(np.unique([static_edge_features['srcId'], static_edge_features['dstId']]))
     node_features_set = set(node_features.index)
     feat_graph_intersec_set = node_features_set.intersection(nodes_set)
-    logging.info('Number of node features in features.txt: {}'.format(len(node_features_set)))
+    logging.info("Number of rows in features.txt (may include duplicated nodes (same node ID)): {}".format(len(node_features)))
+    logging.info('Number of node in features.txt (after removing duplicate): {}'.format(len(node_features_set)))
     logging.info('Number of nodes in networks.csv: {}'.format(len(nodes_set)))
     logging.info('Number of node in the intersection: {}'.format(len(feat_graph_intersec_set)))
     
